@@ -11,6 +11,9 @@ exports.init = function (ssb, config) {
   if (!ssb.friends) {
     throw new Error('ssb-replication-scheduler expects ssb-friends to be installed')
   }
+  if (!ssb.feedReplication) {
+    throw new Error('ssb-replication-scheduler expects feedReplication to be installed')
+  }
 
   // Note: ssb.ebt.request and ssb.ebt.block are idempotent operations,
   // so it's safe to call these methods redundantly, which is most likely
@@ -29,7 +32,7 @@ exports.init = function (ssb, config) {
           const value = graph[source][dest]
           // Only if I am the `source` and `value >= 0`, request replication
           if (source === ssb.id) {
-            ssb.ebt.request(dest, value >= 0)
+            ssb.feedReplication.request(dest, value, value >= 0)
           }
           // Compute every block edge, unless I am the edge destination
           if (dest !== ssb.id) {
@@ -48,17 +51,17 @@ exports.init = function (ssb, config) {
         const value = hops[dest]
         // myself or friendly peers
         if (value >= 0) {
-          ssb.ebt.request(dest, true)
+          ssb.feedReplication.request(dest, value, true)
           ssb.ebt.block(ssb.id, dest, false)
         }
         // blocked peers
         else if (value === -1) {
-          ssb.ebt.request(dest, false)
+          ssb.feedReplication.request(dest, value, false)
           ssb.ebt.block(ssb.id, dest, true)
         }
         // unfollowed/unblocked peers
         else if (value < -1) {
-          ssb.ebt.request(dest, false)
+          ssb.feedReplication.request(dest, value, false)
         }
       }
     }),
